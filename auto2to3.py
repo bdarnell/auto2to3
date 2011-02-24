@@ -1,8 +1,18 @@
 #!/usr/bin/env python3.2
-#
-# Import hook to run 2to3 transparently over imported files.
-# Only works with files that have 'python2' in the first or second line.
-#
+"""Wrapper to run 2to3 automatically at import time.
+
+Usage:
+  auto2to3.py --package=pkg main_module
+
+main_module is run as if by the -m flag to the python interpreter
+(i.e. __name__ == '__main__').  All modules whose name begins with a name
+passed to the --package flag (which may be specified more than once)
+will be run through 2to3.  2to3 output is cached on disk between runs
+for speed.
+
+Based on auto2to3.py by Georg Brandl:
+http://dev.pocoo.org/hg/sandbox/file/tip/auto2to3.py
+"""
 
 import argparse
 import os
