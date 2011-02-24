@@ -49,7 +49,7 @@ class ToThreeImporter(ImpImporter):
             return None
         if file and etc[2] == imp.PY_SOURCE:
             if any(fullname.startswith(p) for p in PACKAGES):
-                outfilename = '_auto2to3-%s.py' % fullname
+                outfilename = '/_auto2to3_'.join(os.path.split(filename))
                 if (not os.path.exists(outfilename) or
                     os.stat(filename).st_mtime > os.stat(outfilename).st_mtime):
                     try:
