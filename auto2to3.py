@@ -12,6 +12,7 @@ import runpy
 from io import StringIO
 from pkgutil import ImpImporter, ImpLoader
 import runpy
+import sys
 import tempfile
 
 import lib2to3
@@ -39,11 +40,8 @@ class ToThreeImporter(ImpImporter):
         except ImportError:
             return None
         if file and etc[2] == imp.PY_SOURCE:
-            filename = '<%r converted by 2to3>' % filename
-            line1 = file.readline()
-            line2 = file.readline()
-            file.seek(0)
-            if 'python2' in line1 or 'python2' in line2:
+            if any(fullname.startswith(p) for p in PACKAGES):
+                filename = '<%r converted by 2to3>' % filename
                 try:
                     tree = rt.refactor_string(file.read(), filename)
                 except Exception as err:
@@ -51,9 +49,12 @@ class ToThreeImporter(ImpImporter):
                 finally:
                     file.close()
                 filename = '/tmp/auto2to3-%s.py' % fullname
-                file = open(filename, 'rb+')
+                print('writing %s' % filename)
+                file = open(filename, 'wb')
                 file.write(str(tree).encode('utf8'))
                 file.seek(0)
+                file.close()
+                file = open(filename, 'rb')
         return ImpLoader(fullname, file, filename, etc)
 
 
@@ -67,10 +68,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--package', action='append')
     parser.add_argument('main')
-    args = parser.parse_args()
+    args, rest = parser.parse_known_args()
     if args.package:
         PACKAGES.extend(args.package)
-    runpy.run_module(args.main)
+    sys.argv[1:] = rest
+    runpy.run_module(args.main, run_name='__main__')
 
 if __name__ == '__main__':
     main()
