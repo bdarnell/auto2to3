@@ -45,7 +45,9 @@ class ToThreeImporter(ImpImporter):
                 if (not os.path.exists(outfile) or
                     os.stat(filename).st_mtime > os.stat(outfile).st_mtime):
                     try:
-                        tree = rt.refactor_string(file.read(), filename)
+                        contents = file.read()
+                        contents = rt.refactor_docstring(contents, filename)
+                        tree = rt.refactor_string(contents, filename)
                     except Exception as err:
                         raise ImportError("2to3 couldn't convert %r" % filename)
                     finally:
