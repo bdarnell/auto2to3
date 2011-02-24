@@ -28,8 +28,6 @@ import tempfile
 import lib2to3
 from lib2to3.refactor import RefactoringTool, get_fixers_from_package
 
-sys.path.append(os.path.dirname(lib2to3.__file__))
-
 fixes = get_fixers_from_package('lib2to3.fixes')
 rt = RefactoringTool(fixes)
 
@@ -51,21 +49,20 @@ class ToThreeImporter(ImpImporter):
             return None
         if file and etc[2] == imp.PY_SOURCE:
             if any(fullname.startswith(p) for p in PACKAGES):
-                outfile = '/tmp/auto2to3-%s.py' % fullname
-                if (not os.path.exists(outfile) or
-                    os.stat(filename).st_mtime > os.stat(outfile).st_mtime):
+                outfilename = '/tmp/auto2to3-%s.py' % fullname
+                if (not os.path.exists(outfilename) or
+                    os.stat(filename).st_mtime > os.stat(outfilename).st_mtime):
                     try:
                         contents = file.read()
                         contents = rt.refactor_docstring(contents, filename)
                         tree = rt.refactor_string(contents, filename)
                     except Exception as err:
                         raise ImportError("2to3 couldn't convert %r" % filename)
-                    finally:
-                        file.close()
-                    file = open(outfile, 'wb')
-                    file.write(str(tree).encode('utf8'))
+                    outfile = open(outfilename, 'wb')
+                    outfile.write(str(tree).encode('utf8'))
+                    outfile.close()
                 file.close()
-                filename = outfile
+                filename = outfilename
                 file = open(filename, 'rb')
         return ImpLoader(fullname, file, filename, etc)
 
