@@ -41,19 +41,19 @@ class ToThreeImporter(ImpImporter):
             return None
         if file and etc[2] == imp.PY_SOURCE:
             if any(fullname.startswith(p) for p in PACKAGES):
-                filename = '<%r converted by 2to3>' % filename
-                try:
-                    tree = rt.refactor_string(file.read(), filename)
-                except Exception as err:
-                    raise ImportError("2to3 couldn't convert %r" % filename)
-                finally:
-                    file.close()
-                filename = '/tmp/auto2to3-%s.py' % fullname
-                print('writing %s' % filename)
-                file = open(filename, 'wb')
-                file.write(str(tree).encode('utf8'))
-                file.seek(0)
+                outfile = '/tmp/auto2to3-%s.py' % fullname
+                if (not os.path.exists(outfile) or
+                    os.stat(filename).st_mtime > os.stat(outfile).st_mtime):
+                    try:
+                        tree = rt.refactor_string(file.read(), filename)
+                    except Exception as err:
+                        raise ImportError("2to3 couldn't convert %r" % filename)
+                    finally:
+                        file.close()
+                    file = open(outfile, 'wb')
+                    file.write(str(tree).encode('utf8'))
                 file.close()
+                filename = outfile
                 file = open(filename, 'rb')
         return ImpLoader(fullname, file, filename, etc)
 
