@@ -15,18 +15,12 @@ import runpy
 import tempfile
 
 import lib2to3
-from lib2to3.refactor import RefactoringTool
+from lib2to3.refactor import RefactoringTool, get_fixers_from_package
 
 sys.path.append(os.path.dirname(lib2to3.__file__))
 
-class DummyOptions:
-    fix = []
-    def __getattr__(self, name):
-        return None
-
-opt = DummyOptions()
-
-rt = RefactoringTool(opt)
+fixes = get_fixers_from_package('lib2to3.fixes')
+rt = RefactoringTool(fixes)
 
 PACKAGES = []
 
@@ -51,15 +45,15 @@ class ToThreeImporter(ImpImporter):
             file.seek(0)
             if 'python2' in line1 or 'python2' in line2:
                 try:
-                    tree = rt.driver.parse_stream(file)
+                    tree = rt.refactor_string(file.read(), filename)
                 except Exception as err:
                     raise ImportError("2to3 couldn't convert %r" % filename)
                 finally:
                     file.close()
-                if rt.refactor_tree(tree, filename):
-                    file = tempfile.TemporaryFile()
-                    file.write(str(tree).encode('utf8'))
-                    file.seek(0)
+                filename = '/tmp/auto2to3-%s.py' % fullname
+                file = open(filename, 'rb+')
+                file.write(str(tree).encode('utf8'))
+                file.seek(0)
         return ImpLoader(fullname, file, filename, etc)
 
 
