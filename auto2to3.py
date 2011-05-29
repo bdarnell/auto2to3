@@ -94,7 +94,7 @@ def main():
     if not PACKAGES and not DIRS:
         DIRS.append(os.getcwd())
     sys.argv[1:] = rest
-    runpy.run_module(args.main, run_name='__main__')
+    runpy.run_module(args.main, run_name='__main__', alter_sys=True)
 
 if __name__ == '__main__':
     main()
