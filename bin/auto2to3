@@ -1,0 +1,6 @@
+#!/usr/bin/env python3.2
+
+import auto2to3
+
+if __name__ == '__main__':
+    auto2to3.main()
