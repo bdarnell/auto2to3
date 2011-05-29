@@ -2,13 +2,19 @@
 """Wrapper to run 2to3 automatically at import time.
 
 Usage:
-  auto2to3.py --package=pkg main_module
+  auto2to3.py main_module
 
 main_module is run as if by the -m flag to the python interpreter
-(i.e. __name__ == '__main__').  All modules whose name begins with a name
-passed to the --package flag (which may be specified more than once)
-will be run through 2to3.  2to3 output is cached on disk between runs
-for speed.
+(i.e. __name__ == '__main__').  It must be specified as a module name,
+not a filename (e.g. tornado.test.runtests, not tornado/test/runtests.py)
+
+All modules whose name begins wtih a prefix passed to the --package or --dir
+flags (which may be specified more than once) will be run through 2to3.
+--package is compared to the python module name, while --dir uses the path
+in the filesystem.  If neither --package or --dir is specified, the current
+directory is assumed, which is often sufficient.
+
+2to3 output is cached on disk between runs for speed.
 
 Based on auto2to3.py by Georg Brandl:
 http://dev.pocoo.org/hg/sandbox/file/tip/auto2to3.py
@@ -32,6 +38,7 @@ fixes = get_fixers_from_package('lib2to3.fixes')
 rt = RefactoringTool(fixes)
 
 PACKAGES = []
+DIRS = []
 
 class ToThreeImporter(ImpImporter):
     def find_module(self, fullname, path=None):
@@ -48,7 +55,8 @@ class ToThreeImporter(ImpImporter):
         except ImportError:
             return None
         if file and etc[2] == imp.PY_SOURCE:
-            if any(fullname.startswith(p) for p in PACKAGES):
+            if (any(fullname.startswith(p) for p in PACKAGES) or
+                any(filename.startswith(d) for d in DIRS)):
                 outfilename = '/_auto2to3_'.join(os.path.split(filename))
                 if (not os.path.exists(outfilename) or
                     os.stat(filename).st_mtime > os.stat(outfilename).st_mtime):
@@ -76,10 +84,15 @@ for key in sys.path_importer_cache:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--package', action='append')
+    parser.add_argument('--dir', action='append')
     parser.add_argument('main')
     args, rest = parser.parse_known_args()
     if args.package:
         PACKAGES.extend(args.package)
+    if args.dir:
+        DIRS.extend(args.dir)
+    if not PACKAGES and not DIRS:
+        DIRS.append(os.getcwd())
     sys.argv[1:] = rest
     runpy.run_module(args.main, run_name='__main__')
 
