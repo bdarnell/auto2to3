@@ -85,6 +85,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--package', action='append')
     parser.add_argument('--dir', action='append')
+    # accept and ignore -m for compatibility with the python interpreter
+    parser.add_argument('-m', action='store_true')
     parser.add_argument('main')
     args, rest = parser.parse_known_args()
     if args.package:
