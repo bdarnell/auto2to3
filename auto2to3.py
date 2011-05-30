@@ -40,6 +40,33 @@ rt = RefactoringTool(fixes)
 PACKAGES = []
 DIRS = []
 
+def maybe_2to3(filename, modname=None):
+    """Returns a python3 version of filename."""
+    need_2to3 = False
+    filename = os.path.abspath(filename)
+    if any(filename.startswith(d) for d in DIRS):
+        need_2to3 = True
+    elif modname is not None and any(modname.startswith(p) for p in PACKAGES):
+        need_2to3 = True
+    if not need_2to3:
+        return filename
+    outfilename = '/_auto2to3_'.join(os.path.split(filename))
+    if (not os.path.exists(outfilename) or
+        os.stat(filename).st_mtime > os.stat(outfilename).st_mtime):
+        try:
+            with open(filename) as file:
+                contents = file.read()
+            contents = rt.refactor_docstring(contents, filename)
+            tree = rt.refactor_string(contents, filename)
+        except Exception as err:
+            raise ImportError("2to3 couldn't convert %r" % filename)
+        outfile = open(outfilename, 'wb')
+        outfile.write(str(tree).encode('utf8'))
+        outfile.close()
+    return outfilename
+
+
+
 class ToThreeImporter(ImpImporter):
     def find_module(self, fullname, path=None):
         # this duplicates most of ImpImporter.find_module
@@ -55,20 +82,8 @@ class ToThreeImporter(ImpImporter):
         except ImportError:
             return None
         if file and etc[2] == imp.PY_SOURCE:
-            if (any(fullname.startswith(p) for p in PACKAGES) or
-                any(filename.startswith(d) for d in DIRS)):
-                outfilename = '/_auto2to3_'.join(os.path.split(filename))
-                if (not os.path.exists(outfilename) or
-                    os.stat(filename).st_mtime > os.stat(outfilename).st_mtime):
-                    try:
-                        contents = file.read()
-                        contents = rt.refactor_docstring(contents, filename)
-                        tree = rt.refactor_string(contents, filename)
-                    except Exception as err:
-                        raise ImportError("2to3 couldn't convert %r" % filename)
-                    outfile = open(outfilename, 'wb')
-                    outfile.write(str(tree).encode('utf8'))
-                    outfile.close()
+            outfilename = maybe_2to3(filename, modname=fullname)
+            if outfilename != filename:
                 file.close()
                 filename = outfilename
                 file = open(filename, 'rb')
@@ -85,18 +100,27 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--package', action='append')
     parser.add_argument('--dir', action='append')
-    # accept and ignore -m for compatibility with the python interpreter
-    parser.add_argument('-m', action='store_true')
-    parser.add_argument('main')
+    parser.add_argument('-m', action='store', metavar='MODULE')
     args, rest = parser.parse_known_args()
     if args.package:
         PACKAGES.extend(args.package)
     if args.dir:
-        DIRS.extend(args.dir)
+        DIRS.extend(os.path.abspath(d) for d in args.dir)
     if not PACKAGES and not DIRS:
         DIRS.append(os.getcwd())
-    sys.argv[1:] = rest
-    runpy.run_module(args.main, run_name='__main__', alter_sys=True)
+    if args.m:
+        sys.argv[1:] = rest
+        runpy.run_module(args.m, run_name='__main__', alter_sys=True)
+    elif rest:
+        sys.argv = rest
+        converted = maybe_2to3(rest[0])
+        with open(converted) as f:
+            new_globals = dict(__name__='__main__',
+                               __file__=rest[0])
+            exec(f.read(), new_globals)
+    else:
+        import code
+        code.interact()
 
 if __name__ == '__main__':
     main()
