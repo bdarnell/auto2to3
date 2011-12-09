@@ -2,17 +2,13 @@
 """Wrapper to run 2to3 automatically at import time.
 
 Usage:
-  auto2to3.py main_module
+  auto2to3 -m mypackage.main_module
+  auto2to3 mypackage/script.py
 
-main_module is run as if by the -m flag to the python interpreter
-(i.e. __name__ == '__main__').  It must be specified as a module name,
-not a filename (e.g. tornado.test.runtests, not tornado/test/runtests.py)
-
-All modules whose name begins wtih a prefix passed to the --package or --dir
-flags (which may be specified more than once) will be run through 2to3.
---package is compared to the python module name, while --dir uses the path
-in the filesystem.  If neither --package or --dir is specified, the current
-directory is assumed, which is often sufficient.
+By default, all modules imported from a subdirectory of the current
+directory will be run through `2to3`.  To change this behavior, use the
+`--package` or `--dir` flags to `auto2to3` to specify which packages or
+directories contain Python 2 code that should be converted.
 
 2to3 output is cached on disk between runs for speed.
 
